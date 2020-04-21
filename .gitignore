@@ -1,2 +1,10 @@
 # Project exclude paths
 /venv/
+/build/
+.idea/
+boom/__pycache__/
+boom/commands/__pycache__/
+boom/utils/__pycache__/
+dist/
+flask_boom.egg-info/
+target/

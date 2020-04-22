@@ -1,0 +1,14 @@
+from flask import Flask
+from flask_cors import CORS
+
+app = Flask(__name__)
+
+cors = CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+app.config['CORS_HEADERS'] = 'Content-Type'
+
+ROUTE_PREFIX = ''
+# [b] Routes
+
+
+if __name__ == '__main__':
+    app.run()

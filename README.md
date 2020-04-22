@@ -49,6 +49,7 @@ The available variables are:
 - **required_packages** - String[] - Array of required python packages - `['flask', 'jinja2']`
 - **author_name** - String - Name of the author - `Tom Grozev`
 - **author_url** - String - URL to author github, website, etc. - `https://github.com/TomGrozev`
+- **project_root** - String - Absolute path to project root - `/home/tom/dev/my-project`
 
 ## Running the tests
 

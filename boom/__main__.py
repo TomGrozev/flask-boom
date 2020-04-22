@@ -6,7 +6,8 @@ from boom.utils.title_helper import get_title
 
 commands_folder = os.path.join(os.path.dirname(__file__), 'commands')
 
-class BaseCommands(click.MultiCommand):
+
+class BaseGroup(click.Group):
     def list_commands(self, ctx):
         rv = []
         for filename in os.listdir(commands_folder):
@@ -16,6 +17,8 @@ class BaseCommands(click.MultiCommand):
         return rv
 
     def get_command(self, ctx, cmd_name):
+        if cmd_name == '__init__':
+            return None
         ns = {}
         command = None
         matches = [x for x in self.list_commands(ctx) if x.startswith(cmd_name[0])]
@@ -32,7 +35,7 @@ class BaseCommands(click.MultiCommand):
         return ns['run']
 
 
-@click.command(cls=BaseCommands)
+@click.group(cls=BaseGroup)
 @click.pass_context
 def cli(ctx):
     ctx.ensure_object(dict)

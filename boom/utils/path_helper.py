@@ -102,7 +102,7 @@ def is_path_exists_or_creatable(pathname: str) -> bool:
     This function is guaranteed to _never_ raise exceptions.
     """
     try:
-        # To prevent "os" module calls from raising undesirable exceptions on
+        # To prevent "os" app calls from raising undesirable exceptions on
         # invalid pathnames, is_pathname_valid() is explicitly called first.
         return is_pathname_valid(pathname) and (
                 os.path.exists(pathname) or is_path_creatable(pathname))
@@ -145,7 +145,7 @@ def is_path_exists_or_creatable_portable(pathname: str) -> bool:
     This function is guaranteed to _never_ raise exceptions.
     """
     try:
-        # To prevent "os" module calls from raising undesirable exceptions on
+        # To prevent "os" app calls from raising undesirable exceptions on
         # invalid pathnames, is_pathname_valid() is explicitly called first.
         return is_pathname_valid(pathname) and (
                 os.path.exists(pathname) or is_path_sibling_creatable(pathname))
@@ -154,3 +154,11 @@ def is_path_exists_or_creatable_portable(pathname: str) -> bool:
     # other exceptions are unrelated fatal issues and should not be caught here.
     except OSError:
         return False
+
+def valid_directory(target_dir):
+    """
+    Checks if directory is valid
+    :param target_dir: Target directory to check
+    :return:
+    """
+    return is_pathname_valid(target_dir) and os.path.exists(target_dir) and os.path.isdir(target_dir)

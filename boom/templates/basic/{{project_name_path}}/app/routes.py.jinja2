@@ -1,0 +1,7 @@
+from flask import Blueprint
+
+{{module_name_plural}} = Blueprint('{{module_name}}', __name__)
+
+@{{module_name_plural}}.route('/', method=['GET'])
+def get_{{module_name_plural}}():
+    return '[]'

@@ -1,0 +1,7 @@
+from flask import Blueprint, render_template
+
+root_routes = Blueprint('', __name__, template_folder='templates', static_folder='static')
+
+@root_routes.route('/', methods=['GET'])
+def get_root():
+    return render_template('index.html')

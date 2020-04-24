@@ -3,5 +3,6 @@
   "description": "Basic Flask Web App",
   "author": "Tom Grozev",
   "url": "https://github.com/TomGrozev/flask-boom",
-  "type": "app"
+  "type": "app",
+  "module_init": "init_app(app)"
 }

@@ -1,0 +1,7 @@
+from {{ project_name_path }}.{{module_name}}.routes import {{module_name_plural}}
+
+def init_app(app):
+    # Import blueprints
+    app.register_blueprint({{module_name_plural}})
+
+    # Any Additional App config

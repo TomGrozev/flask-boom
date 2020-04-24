@@ -30,7 +30,7 @@ def run(ctx, **kwargs):
 
     # Convert tuple project name to string
     if len(kwargs.get('project_name')) > 0:
-        kwargs.update(project_name='-'.join(kwargs.get('project_name')))
+        kwargs.update(project_name=' '.join(kwargs.get('project_name')))
 
     template_handler = TemplateHandler(ctx)
 
@@ -57,29 +57,30 @@ def run(ctx, **kwargs):
             'when': lambda _: len(kwargs.get('project_name')) == 0
         },
         {
-            'type': 'editor',
+            'type': 'input',
             'name': 'project_description',
-            'message': 'Description of your project:',
-            'eargs': {'editor': 'vi'},
+            'message': 'Description of your project (min 20 characters):',
+            'validate': lambda val: len(val) >= 20,
             'when': lambda _: kwargs.get('project_description') is None
         },
         {
             'type': 'input',
             'name': 'author_name',
             'message': 'Name of the author:',
+            'validate': lambda val: len(val) >= 5,
             'when': lambda _: kwargs.get('author_name') is None
         },
         {
             'type': 'input',
             'name': 'author_url',
             'message': 'URL to author page (usually a GitHub page):',
+            'validate': lambda val: len(val) >= 5,
             'when': lambda _: kwargs.get('author_url') is None
         },
         {
             'type': 'list',
             'name': 'template',
             'message': 'Template to use:',
-            'basic': 'Default',
             'choices': template_handler.template_option_names,
             'filter': lambda t: template_handler.templates[template_handler.template_option_names.index(t)]
         }
@@ -89,7 +90,9 @@ def run(ctx, **kwargs):
     root_vars = {**kwargs, **answers}
 
     # Add new vars
-    root_vars.update(project_name_path=root_vars.get('project_name').lower().replace(' ', '-'))
+    root_vars.update(project_name_path=re.sub('[^A-Za-z0-9_ ]+', '',
+                                              root_vars.get('project_name').lower().replace(' ', '_')
+                                              .replace('-', '_')))
 
     # Update target path
     if root_vars.get('project_root') is None:

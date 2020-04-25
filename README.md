@@ -9,7 +9,7 @@ Flask Boom uses templates to create projects. At the moment there are two kinda 
 
 This project is still a work in progress and I **DO NOT** recommend using it in a production environment. Feel free to contribute in the mean time.
 
-##Documentation
+## Documentation
 
 Flask Boom works using templates to define how projects are structured.
 
@@ -21,7 +21,7 @@ Flask Boom works using templates to define how projects are structured.
 The Jinja Templating language is used, more details on exactly how to use it can be found here 
 [Jinja Docs](https://jinja.palletsprojects.com)
 
-#####Globally Available Variables
+##### Globally Available Variables
 
 | Variable Name        | Type           | Example                        | Description                          |
 | -------------------- |:--------------:|:------------------------------:| ------------------------------------ |
@@ -34,7 +34,7 @@ The Jinja Templating language is used, more details on exactly how to use it can
 | project_root         | String         | `/home/tom/dev/my-project`     | Absolute path to project root         
 
 
-#####Module Available Variables
+##### Module Available Variables
 
 | Variable Name        | Type           | Example                        | Description                          |
 | -------------------- |:--------------:|:------------------------------:| ------------------------------------ |

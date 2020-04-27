@@ -31,5 +31,6 @@ def run(ctx, **kwargs):
     if len(kwargs.get('name')) > 0:
         kwargs.update(name='-'.join(kwargs.get('name')))
 
-    project_handler = ProjectHandler(ctx, kwargs.get('project_root', os.getcwd()))
+    project_handler = ProjectHandler(ctx, verbose=verbose)
+    project_handler.load_project(kwargs.get('project_root', os.getcwd()))
     project_handler.generate_module(kwargs.get('module'), kwargs.get('name'))

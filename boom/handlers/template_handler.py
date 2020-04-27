@@ -3,8 +3,10 @@ import os
 
 import click
 from jinja2 import Template
+from schema import SchemaError
 from termcolor import colored
 
+from boom.schema.template_config import template_config_schema
 from boom.utils.path_helper import valid_directory
 
 DO_NOT_TEMPLATE_FILES = ['template.boom.json']
@@ -22,7 +24,6 @@ class TemplateHandler:
     # Static
     templates_path: str
     templates = []
-    selected_template = {}
 
     def __init__(self, ctx, verbose=0) -> None:
         """
@@ -36,7 +37,8 @@ class TemplateHandler:
         self.verbose = verbose
 
         self.validate_templates_path()
-        self.load_templates()
+        if len(TemplateHandler.templates) == 0:
+            self.load_templates()
 
     def validate_templates_path(self):
         """
@@ -46,32 +48,46 @@ class TemplateHandler:
             self.__ctx__.fail(
                 colored('Invalid template path: %s' % TemplateHandler.templates_path, 'red', attrs=['bold']))
 
+    def get_config_for_slug(self, slug, fresh=False):
+        if fresh:
+            self.load_templates()
+        for template in TemplateHandler.templates:
+            if template.get('slug') == slug:
+                return template
+        return None
+
     def load_template_conf(self, root_dir):
         abs_path = os.path.join(TemplateHandler.templates_path, root_dir)
         if not valid_directory(abs_path):
-            self.__ctx__.fail(
-                colored('Invalid template path: %s' % abs_path, 'red', attrs=['bold']))
-        template_conf = json.loads(open(os.path.join(abs_path, 'template.boom.json'), "r").read())
-        if not self.__validate_template_config__(template_conf):
+            if self.verbose >= 1:
+                click.secho('Invalid template path: %s' % abs_path, fg='yellow')
             return None
-        template_conf.update(root_dir=root_dir)
-        template_conf.update(abs_dir=abs_path)
-        # Set required packages
-        req_path = os.path.join(abs_path, 'requirements.txt')
-        req = []
-        if os.path.exists(req_path):
-            req = open(req_path, "r").read()
-            req = req.split('\n')
-        template_conf.update(required_packages=req)
-        return template_conf
+        with open(os.path.join(abs_path, 'template.boom.json'), "r") as f:
+            template_conf = json.loads(f.read())
+            f.close()
+            try:
+                template_conf = self.validate_template_config(template_conf)
+            except SchemaError as e:
+                if self.verbose >= 1:
+                    click.secho('Invalid Template config: %s' % e, fg='yellow')
+                return None
+            # These variables are not saved but are just easier than keep checking
+            template_conf.update(root_dir=root_dir)
+            template_conf.update(abs_dir=abs_path)
+            # Set required packages
+            req = self.load_requirements(abs_path)
+            template_conf.update(required_packages=req)
+            return template_conf
 
     @staticmethod
-    def select_template(template_config):
-        """
-        Selects a template to be used
-        :param template_config: Config to load
-        """
-        TemplateHandler.selected_template = template_config
+    def load_requirements(template_path):
+        req_path = os.path.join(template_path, 'requirements.txt')
+        req = []
+        if os.path.exists(req_path):
+            with open(req_path, "r") as f:
+                # TODO: Strip versions?
+                req = f.read().split('\n')
+        return req
 
     def load_templates(self):
         """
@@ -79,8 +95,6 @@ class TemplateHandler:
 
         Skips if templates are already loaded
         """
-        if len(TemplateHandler.templates) > 0:
-            return
         TemplateHandler.templates = []
         for template in os.listdir(TemplateHandler.templates_path):
             template_config = self.load_template_conf(template)
@@ -88,20 +102,14 @@ class TemplateHandler:
                 continue
             TemplateHandler.templates.append(template_config)
 
-    def __validate_template_config__(self, template_config):
+    @staticmethod
+    def validate_template_config(template_config):
         """
         Validates the template config
         :param template_config: Config to check
-        :return bool: If Valid
+        :return bool: valid template config
         """
-        required_keys = ['name', 'description', 'author', 'url', 'type']
-        missing = list(set(required_keys) - set(template_config.keys()))
-        if len(missing) > 0:
-            if self.verbose >= 1:
-                click.secho('Missing one or more required template config variables: %s' % ', '.join(missing), fg='red',
-                            bold=True)
-            return False
-        return True
+        return template_config_schema.validate(template_config)
 
     @property
     def template_option_names(self) -> [str]:

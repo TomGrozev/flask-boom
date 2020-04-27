@@ -1,8 +1,9 @@
 {
+  "slug": "basic",
   "name": "Basic",
-  "description": "Basic Flask Web App",
+  "description": "Basic Flask Web App serves content via rendering templates",
   "author": "Tom Grozev",
   "url": "https://github.com/TomGrozev/flask-boom",
   "type": "app",
-  "module_init": "init_app(app)"
+  "module_init_func": "init_app(app)"
 }

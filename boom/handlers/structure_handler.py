@@ -17,9 +17,10 @@ class StructureHandler:
     """
     __ctx__ = None
     root_vars: dict = {}
+    project_root = os.getcwd()
     verbose: int = 0
 
-    def __init__(self, ctx, root_vars, verbose=0) -> None:
+    def __init__(self, ctx, root_vars: object, project_root: str, verbose=0) -> None:
         """
         Initialises Handler with context, vars and verbosity
 
@@ -30,29 +31,12 @@ class StructureHandler:
 
         self.__ctx__ = ctx
         self.root_vars = root_vars
+        self.project_root = project_root
         self.verbose = verbose
 
-        self.validate_vars()
-
-    def validate_vars(self) -> bool:
-        """
-        Validates root vars
-
-        Checks required vars and project root path
-        :return bool: If valid
-        """
-
-        required_keys = ['project_name', 'project_name_path', 'project_description', 'author_name', 'author_url',
-                         'project_root']
-        missing = list(set(required_keys) - set(self.root_vars.keys()))
-        if len(missing) > 0:
-            self.__ctx__.fail(colored('Missing one or more required template variables: %s' % ', '.join(missing), 'red',
-                                      attrs=['bold']))
-            return False
         if not self.validate_project_root():
-            self.__ctx__.fail(colored('Target path is invalid. Could be a permissions error.', 'red', attrs=['bold']))
-            return False
-        return True
+            self.__ctx__.fail(
+                colored('Target path is invalid. Could be a file system permissions error.', 'red', attrs=['bold']))
 
     def validate_project_root(self) -> bool:
         """
@@ -61,61 +45,49 @@ class StructureHandler:
         :return bool: If project root path exists or is creatable
         """
 
-        if not is_pathname_valid(self.root_vars.get('project_root')) and self.verbose >= 1:
-            click.secho('Target is not a valid pathname.', fg='yellow')
+        if not is_pathname_valid(self.project_root):
+            if self.verbose >= 1:
+                click.secho('Target is not a valid pathname.', fg='yellow')
             return False
-        if not is_path_creatable(self.root_vars.get('project_root')) and self.verbose >= 1:
-            if not os.path.exists(self.root_vars.get('project_root')) and self.verbose >= 1:
-                click.secho('Target does not exist and is not creatable.', fg='yellow')
-                return False
-            if not os.path.isdir(self.root_vars.get('project_root')) and self.verbose >= 1:
-                click.secho('Target is not a directory and is not creatable.', fg='yellow')
+        if not is_path_creatable(self.project_root):
+            if not os.path.exists(self.project_root):
+                if not is_path_creatable(os.path.dirname(self.project_root)):
+                    if self.verbose >= 1:
+                        click.secho('Target does not exist and is not creatable.', fg='yellow')
+                    return False
+            elif not os.path.isdir(self.project_root):
+                if self.verbose >= 1:
+                    click.secho('Target is not a directory and is not creatable.', fg='yellow')
                 return False
         return True
 
-    def create_project_structure(self):
+    def create_project_structure(self, selected_template_config):
         """
         Generates project structure using the selected template
         """
         # Ensure template is selected
-        if TemplateHandler.selected_template == {}:
-            if len(TemplateHandler.templates) > 0:
-                if self.verbose >= 2:
-                    click.secho('No template selected, selecting default', fg='yellow')
-                TemplateHandler.select_template(TemplateHandler.templates[0])
-            else:
-                self.__ctx__.fail(colored('No template selected, could not select default', 'red', attrs=['bold']))
+        if not TemplateHandler.validate_template_config(selected_template_config):
+            self.__ctx__.fail(colored('No template selected', 'red', attrs=['bold']))
+            return
 
         click.secho('########### Creating Project Structure ###########', fg='cyan')
         # Create root directory if it doesn't already exist
         self.create_project_root_if_does_not_exist()
 
         # Check if directory is not empty and empty if so
-        self.empty_if_not(self.root_vars.get('project_root'))
+        self.empty_if_not(self.project_root)
 
         click.secho('Creating files and folders')
         # Recursively create all files in directory
-        self.create_files_for_dir(TemplateHandler.selected_template.get('abs_dir'), self.root_vars.get('project_root'))
-
-        # Save project settings to file
-        self.save_project_settings()
-
-    def save_project_settings(self):
-        click.secho('########### Saving Project Settings ###########', fg='cyan')
-        project_settings = self.root_vars
-        project_settings.update(template={k: v for k, v in project_settings.get('template', {}).items() if
-                                          k in ['required_packages', 'abs_dir', 'root_dir']})
-        project_settings_file = open(os.path.join(self.root_vars.get('project_root'), 'project.boom.json'), "w")
-        project_settings_file.write(json.dumps(project_settings))
-        project_settings_file.close()
-        click.secho('Saved Project Settings to project.boom.json', fg='green')
+        self.create_files_for_dir(selected_template_config.get('abs_dir'), self.project_root,
+                                  root=True, type=selected_template_config.get('type', 'app'))
 
     def create_project_root_if_does_not_exist(self):
         """
         Creates project root if does not exist
         """
 
-        self.create_dir_if_does_not_exist(self.root_vars.get('project_root'))
+        self.create_dir_if_does_not_exist(self.project_root)
 
     def create_dir_if_does_not_exist(self, target_dir):
         """
@@ -167,10 +139,11 @@ class StructureHandler:
                 self.__ctx__.fail(colored('Failed to clear contents of target directory', 'red', attrs=['bold']))
         click.secho('Directory Emptied', fg='green')
 
-    def create_files_for_dir(self, template_dir, out_dir):
+    def create_files_for_dir(self, template_dir, out_dir, root=False, type='app'):
         """
         Recursively create files and folders in target using template
 
+        :param root:
         :param template_dir:
         :param out_dir:
         :return:
@@ -178,7 +151,6 @@ class StructureHandler:
         for filename in os.listdir(template_dir):
             if filename == 'template.boom.json':
                 continue
-            type = TemplateHandler.selected_template.get('type', 'app')
             allow_render = True
             if type == 'function':
                 pass
@@ -186,25 +158,32 @@ class StructureHandler:
                 allow_render = self.type_app_create(filename)
             if not allow_render:
                 continue
-            file_path = os.path.join(template_dir, filename)
+            template_file_path = os.path.join(template_dir, filename)
             if filename.endswith('.jinja2'):
                 filename = filename[:-7]
-            target_file_path = os.path.join(out_dir, TemplateHandler.template_filename(filename, self.root_vars))
+            if os.path.isdir(template_file_path) and filename == 'project' and root:
+                filename = self.root_vars.get('project_name_path')
+            target_file_path = os.path.join(out_dir, filename)
             # Recursive if is directory
-            if os.path.isdir(file_path):
+            if os.path.isdir(template_file_path):
                 if os.path.exists(target_file_path):
                     continue
                 os.makedirs(target_file_path)
-                self.create_files_for_dir(file_path, target_file_path)
+                self.create_files_for_dir(template_file_path, target_file_path)
                 continue
-            # Open source
-            f = open(file_path, 'r')
-            # Get temperated content
-            res = TemplateHandler.render_template(file_path, f.read(), self.root_vars)
-            # Write output
-            out = open(target_file_path, 'w+')
-            out.write(res)
-            out.close()
+            self.create_file(template_file_path, target_file_path)
+
+    def create_file(self, source_file_path, target_file_path):
+        if not is_pathname_valid(source_file_path) or not os.path.exists(source_file_path) or \
+                not os.path.isfile(source_file_path) or not is_pathname_valid(target_file_path):
+            self.__ctx__.fail(
+                colored('File path is invalid. Could be a file system permissions error.', 'red', attrs=['bold']))
+            return
+        with open(source_file_path, 'r') as source_file:
+            res = TemplateHandler.render_template(source_file_path, source_file.read(), self.root_vars)
+            with open(target_file_path, 'w+') as out_file:
+                out_file.write(res)
+                out_file.close()
 
     def type_app_create(self, filename):
         if filename == 'app':

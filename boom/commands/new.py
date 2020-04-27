@@ -5,15 +5,15 @@ import click
 from PyInquirer import prompt
 from termcolor import colored
 
-from boom.handlers.package_handler import PackageHandler
-from boom.handlers.structure_handler import StructureHandler
+from boom.handlers.project_handler import ProjectHandler
 from boom.handlers.template_handler import TemplateHandler
+
+url_pattern = re.compile("^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$")
 
 
 @click.command('new', short_help='Creates a new project')
 @click.argument('project_name', required=False, nargs=-1, type=click.STRING)
-@click.option('-d', '--project_description', type=click.STRING)
-@click.option('-a', '--author_name', type=click.STRING)
+@click.option('-a', '--author_name', nargs=2, type=click.STRING)
 @click.option('-u', '--author_url', type=click.STRING)
 @click.option('-r', '--project_root', type=click.Path(file_okay=False, writable=True))
 @click.option('-v', '--verbose', count=True)
@@ -31,8 +31,10 @@ def run(ctx, **kwargs):
     # Convert tuple project name to string
     if len(kwargs.get('project_name')) > 0:
         kwargs.update(project_name=' '.join(kwargs.get('project_name')))
+    if len(kwargs.get('author_name')) > 0:
+        kwargs.update(author_name=' '.join(kwargs.get('author_name')))
 
-    template_handler = TemplateHandler(ctx)
+    template_handler = TemplateHandler(ctx, verbose)
 
     if len(template_handler.templates) == 0:
         click.secho('No valid templates available for use', fg='red', bold=True)
@@ -67,14 +69,14 @@ def run(ctx, **kwargs):
             'type': 'input',
             'name': 'author_name',
             'message': 'Name of the author:',
-            'validate': lambda val: len(val) >= 5,
+            'validate': lambda val: len(val) >= 4,
             'when': lambda _: kwargs.get('author_name') is None
         },
         {
             'type': 'input',
             'name': 'author_url',
             'message': 'URL to author page (usually a GitHub page):',
-            'validate': lambda val: len(val) >= 5,
+            'validate': lambda val: bool(url_pattern.match(val)),
             'when': lambda _: kwargs.get('author_url') is None
         },
         {
@@ -96,22 +98,15 @@ def run(ctx, **kwargs):
 
     # Update target path
     if root_vars.get('project_root') is None:
-        root_vars.update(project_root=os.path.abspath(root_vars.get('project_name_path')))
+        project_root = os.path.abspath(root_vars.get('project_name_path'))
     else:
-        root_vars.update(project_root=os.path.join(os.path.abspath(root_vars.get('project_root')),
-                                                   root_vars.get('project_name_path')))
+        project_root = os.path.join(os.path.abspath(root_vars.get('project_root')),
+                                    root_vars.get('project_name_path'))
+    root_vars.pop('project_root')
 
     # Create Handler (also validates structure)
-    structure_handler = StructureHandler(ctx, root_vars, verbose)
-
-    # Select template
-    template_handler.select_template(root_vars.get('template', {}))
-
-    # Create project structure (including files)
-    structure_handler.create_project_structure()
-
-    # Create virtual environment
-    PackageHandler(ctx, root_vars.get('project_root'), verbose).start_venv()
+    project_structure = ProjectHandler(ctx, verbose=verbose)
+    project_structure.create_project(project_root, root_vars)
 
 
 def __validate_project_name__(project_name) -> bool:

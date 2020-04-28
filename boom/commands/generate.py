@@ -1,14 +1,7 @@
 import os
-import re
-
 import click
-from PyInquirer import prompt
-from termcolor import colored
 
-from boom.handlers.package_handler import PackageHandler
 from boom.handlers.project_handler import ProjectHandler
-from boom.handlers.structure_handler import StructureHandler
-from boom.handlers.template_handler import TemplateHandler
 
 
 @click.command('generate', short_help='Generates a new module in project')

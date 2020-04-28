@@ -9,7 +9,7 @@ cors = CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=T
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 # [b] Apps
-{{ project_name_path }}.{{ template.module_init }}
+{{ project_name_path }}.init_app(app)
 
 
 if __name__ == '__main__':

@@ -70,7 +70,7 @@ def run(ctx, **kwargs):
             'name': 'author_name',
             'message': 'Name of the author:',
             'validate': lambda val: len(val) >= 4,
-            'when': lambda _: kwargs.get('author_name') is None
+            'when': lambda _: len(kwargs.get('author_name')) == 0
         },
         {
             'type': 'input',

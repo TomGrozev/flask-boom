@@ -13,10 +13,11 @@ def run():
     click.echo('Flask Boom: %s' % boom.__version__)
     click.echo('Python: %d.%d.%d' % (sys.version_info.major, sys.version_info.minor, sys.version_info.micro))
     click.echo('OS: %s %s' % (platform.system(), platform.release()))
-    click.echo('\n')
 
-    # Package Versions
-    click.secho('Installed Packages\n', fg='cyan', bold=True)
-    package_freeze = freeze.freeze()
-    rows = [package.split('==', maxsplit=1) for package in package_freeze]
-    click.echo(tabulate(rows, headers=['Package', 'Version']))
+    if sys.base_prefix != sys.prefix:
+        click.secho('\nVirtual Environment Active\n', fg='green', bold=True)
+        # Package Versions
+        click.secho('Installed Packages\n', fg='cyan', bold=True)
+        package_freeze = freeze.freeze()
+        rows = [package.split('==', maxsplit=1) for package in package_freeze]
+        click.echo(tabulate(rows, headers=['Package', 'Version']))

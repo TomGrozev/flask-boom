@@ -9,6 +9,7 @@ setup(name='flask-boom',
       author='Tom Grozev',
       author_email='enquires@tomgrozev.com',
       packages=['boom', 'boom.utils', 'boom.schema', 'boom.handlers', 'boom.commands'],
+      include_package_data=True,
       install_requires=[
         'click~=7.1.1',
         'setuptools~=46.1.3',

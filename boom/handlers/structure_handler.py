@@ -166,7 +166,7 @@ class StructureHandler:
             target_file_path = os.path.join(out_dir, filename)
             # Recursive if is directory
             if os.path.isdir(template_file_path):
-                if os.path.exists(target_file_path):
+                if os.path.exists(target_file_path) or filename.startswith('__'):
                     continue
                 os.makedirs(target_file_path)
                 self.create_files_for_dir(template_file_path, target_file_path)

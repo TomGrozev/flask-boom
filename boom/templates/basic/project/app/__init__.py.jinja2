@@ -2,6 +2,6 @@ from {{ project_name_path }}{% if module_prefix != '' %}.{{ module_prefix }}{% e
 
 def init_app(app):
     # Import blueprints
-    app.register_blueprint({{module_name_plural}}_routes)
+    app.register_blueprint({{module_name_plural}}_routes, url_prefix='/{{ module_name }}')
 
     # Any Additional App config

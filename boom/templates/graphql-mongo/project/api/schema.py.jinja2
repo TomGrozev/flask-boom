@@ -1,0 +1,12 @@
+{% if module_model is defined -%}
+{% set module_model_title = module_model[0]|upper + module_model[1:] -%}
+import graphene
+from graphene_mongo import MongoengineConnectionField
+
+from {{ project_name_path }}{% if module_prefix != '' %}.{{ module_prefix }}{% endif %}.{{module_name}}.types import {{ module_model_title }}Type
+
+
+class {{ module_model_title }}Query(graphene.ObjectType):
+    users = MongoengineConnectionField({{ module_model_title }}Type)
+    user = graphene.Field({{ module_model_title }}Type)
+{% endif %}

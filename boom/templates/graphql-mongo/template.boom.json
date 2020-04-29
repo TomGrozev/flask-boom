@@ -1,0 +1,9 @@
+{
+  "slug": "graphql-mongo",
+  "name": "GraphQL MongoDB",
+  "description": "GraphQL Flask Web API serves content through GraphQL and does not use templates, built upon MongoDB",
+  "author": "Tom Grozev",
+  "url": "https://github.com/TomGrozev/flask-boom",
+  "type": "app",
+  "module_init_func": "init_app(app)"
+}

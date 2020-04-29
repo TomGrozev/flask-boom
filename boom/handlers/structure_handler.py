@@ -151,14 +151,14 @@ class StructureHandler:
         for filename in os.listdir(template_dir):
             if filename == 'template.boom.json':
                 continue
+            template_file_path = os.path.join(template_dir, filename)
             allow_render = True
             if type == 'function':
                 pass
             else:
-                allow_render = self.type_app_create(filename)
+                allow_render = self.type_app_create(template_file_path)
             if not allow_render:
                 continue
-            template_file_path = os.path.join(template_dir, filename)
             if filename.endswith('.jinja2'):
                 filename = filename[:-7]
             if os.path.isdir(template_file_path) and filename == 'project' and root:
@@ -185,7 +185,7 @@ class StructureHandler:
                 out_file.write(res)
                 out_file.close()
 
-    def type_app_create(self, filename):
-        if filename == 'app':
+    def type_app_create(self, template_file_path):
+        if template_file_path.endswith('app') and os.path.isdir(template_file_path):
             return False
         return True

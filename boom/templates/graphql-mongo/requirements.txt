@@ -1,0 +1,6 @@
+Flask
+Flask-Cors
+Flask-GraphQL
+graphene
+mongoengine
+graphene-mongo

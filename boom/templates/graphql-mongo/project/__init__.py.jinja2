@@ -1,0 +1,9 @@
+from {{ project_name_path }}.routes import root_routes
+
+def init_app(app):
+    # Import blueprints
+    app.register_blueprint(root_routes)
+
+    # [b] Apps
+
+    # Any Additional App config

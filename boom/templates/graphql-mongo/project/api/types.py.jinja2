@@ -1,0 +1,14 @@
+{% if module_model is defined -%}
+{% set module_model_title = module_model[0]|upper + module_model[1:] -%}
+from graphene_mongo import MongoengineObjectType
+from graphene.relay import Node
+
+from {{ project_name_path }}.{{module_model_path}}.models import {{ module_model_title }} as {{ module_model_title }}Model
+
+
+class {{ module_model_title }}Type(MongoengineObjectType):
+    class Meta:
+        model = {{ module_model_title }}Model
+        interfaces = (Node,)
+
+{% endif %}

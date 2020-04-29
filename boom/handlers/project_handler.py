@@ -53,6 +53,32 @@ def write_at_marker(lines, line_to_write, match: Pattern or None = None, marker=
     return lines
 
 
+def import_module(lines: list, module, prefix=''):
+    if isinstance(lines, list):
+        marker_idx = [i for i, line in enumerate(lines) if re.compile('^(.*)import(.*)$').match(line)]
+        if len(marker_idx) > 0:
+            marker_idx = marker_idx[0] + 1
+        else:
+            marker_idx = 0
+        if prefix != '':
+            match = re.compile('^from ' + prefix + ' import (.*)$')
+            line = {i: line for i, line in enumerate(lines) if match.match(line)}
+            if len(line.keys()) != 0:
+                k = next(iter(line))
+                found_modules = match.search(line[k]).group(1).split(', ')
+                if module not in found_modules:
+                    found_modules.append(module)
+                    lines[k] = f"from {prefix} import {', '.join(found_modules)}\n"
+            else:
+                lines.insert(marker_idx, f"from {prefix} import {module}\n")
+        else:
+            line_to_write = f"import {module}"
+            exists = [i for i, line in enumerate(lines) if line_to_write in line]
+            if len(exists) == 0:
+                lines.insert(marker_idx, line_to_write)
+    return lines
+
+
 def write_lines_to_file(lines, file):
     if not isinstance(lines, list):
         if lines == 'exists':
@@ -144,7 +170,7 @@ class ProjectHandler:
         # Load Template config
         self.select_template(ProjectHandler.project_config.get('template').get('slug'))
 
-    def generate_module(self, module, name):
+    def generate_module(self, module, name: str, model=None):
         if self.project_root is None:
             self.__ctx__.fail(colored('Could not load project', 'red', attrs=['bold']))
         if self.project_template_config is None:
@@ -153,11 +179,25 @@ class ProjectHandler:
         type = self.project_template_config.get('type', 'app')
         structure_handler = StructureHandler(self.__ctx__, ProjectHandler.project_config, self.project_root,
                                              self.verbose)
+        prefix = ''
+        if '/' in name:
+            splits = name.split('/')
+            name = splits[-1]
+            prefix = '.'.join(splits[:-1])
         # Add extra variables
+        if model is not None:
+            model_path = os.path.join(ProjectHandler.project_config.get('project_name_path'), model)
+            if not os.path.exists(model_path):
+                self.__ctx__.fail(colored('Model does not exist at path: %s' % model_path, 'red', attrs=['bold']))
+                return
+            m = model.split('/')
+            structure_handler.root_vars.update(module_model=m[-1])
+            structure_handler.root_vars.update(module_model_path='.'.join(m))
+        structure_handler.root_vars.update(module_prefix=prefix)
         structure_handler.root_vars.update(module_name=name)
         structure_handler.root_vars.update(module_name_plural=engine.plural(name))
         # Paths
-        input_module_path, output_module_path = self.__get_module_paths__(type, module, name)
+        input_module_path, output_module_path = self.__get_module_paths__(type, module, name, prefix)
         if not os.path.exists(input_module_path):
             self.__ctx__.fail(colored('Unknown module: %s' % module, 'red', attrs=['bold']))
         structure_handler.create_dir_if_does_not_exist(output_module_path)
@@ -166,7 +206,7 @@ class ProjectHandler:
             structure_handler.create_files_for_dir(
                 input_module_path,
                 output_module_path)
-            self.register_app(name)
+            self.register_app(name, os.path.dirname(output_module_path))
         else:
             source_path = os.path.join(input_module_path, f'{module}.py')  # E.g. route.py
             if not os.path.exists(source_path):
@@ -176,7 +216,7 @@ class ProjectHandler:
                                    structure_handler.root_vars.get('module_name_plural'))
         click.secho('Generation Complete', fg='green', bold=True)
 
-    def __get_module_paths__(self, template_type, module, name):
+    def __get_module_paths__(self, template_type, module, name, prefix):
         """
         Gets the input and output paths
 
@@ -185,24 +225,28 @@ class ProjectHandler:
         :param name:
         :return: input_module_path, output_module_path
         """
+        prefix = '/'.join(prefix.split('.')) if template_type == 'app' else ''
         return os.path.join(self.project_template_config.get('abs_dir'), 'project',
                             module if template_type == 'app' else engine.plural(module)), \
                os.path.join(self.project_root, ProjectHandler.project_config.get('project_name_path'),
-                            name if template_type == 'app' else engine.plural(module))
+                            prefix, name if template_type == 'app' else engine.plural(module))
 
-    def register_app(self, name):
+    def __get_module_from_path__(self, path):
+        return '.'.join(os.path.relpath(path, self.project_root).split('/'))
+
+    def register_app(self, name, module_path):
         # Register app
         init_func = self.project_template_config.get('module_init_func', 'init_app')
         if init_func is not None:
+            init_path = os.path.join(module_path, '__init__.py')
+            while not os.path.exists(init_path):
+                init_path = os.path.abspath(os.path.join(os.path.dirname(init_path), '..', '__init__.py'))
             # Open target project base init func
-            with open(os.path.join(self.project_root, ProjectHandler.project_config.get('project_name_path'),
-                                   '__init__.py'), "r+") as f:
+            with open(init_path, "r+") as f:
                 lines = f.readlines()
                 new_lines = write_at_marker(lines, line_to_write=f"    {name}.{init_func}",
                                             match=re.compile(f'^(.*){init_func}(.*)$'), marker='[b] Apps')
-                new_lines = write_at_marker(new_lines,
-                                            line_to_write=f"from {ProjectHandler.project_config.get('project_name_path')} import {name}",
-                                            match=re.compile('^(.*)import(.*)$'))
+                new_lines = import_module(new_lines, name, self.__get_module_from_path__(module_path))
                 write_lines_to_file(new_lines, f)
 
     @staticmethod

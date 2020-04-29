@@ -8,6 +8,7 @@ from boom.handlers.project_handler import ProjectHandler
 @click.argument('module', required=True, type=click.STRING)
 @click.argument('name', required=True, nargs=-1, type=click.STRING)
 @click.option('-r', '--project_root', default=os.getcwd(), type=click.Path(exists=True, file_okay=False, writable=True))
+@click.option('-m', '--model', type=click.STRING)
 @click.option('-v', '--verbose', count=True)
 @click.pass_context
 def run(ctx, **kwargs):
@@ -26,4 +27,4 @@ def run(ctx, **kwargs):
 
     project_handler = ProjectHandler(ctx, verbose=verbose)
     project_handler.load_project(kwargs.get('project_root', os.getcwd()))
-    project_handler.generate_module(kwargs.get('module'), kwargs.get('name'))
+    project_handler.generate_module(kwargs.get('module'), kwargs.get('name'), kwargs.get('model'))
